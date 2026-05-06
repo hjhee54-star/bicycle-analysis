@@ -333,7 +333,7 @@ try:
                 "대여소수": "{:,}",
                 "총이용건수": "{:,}",
                 "대여소당평균이용건수": "{:,.1f}",
-            }).background_gradient(subset=["대여소당평균이용건수"], cmap="Blues"),
+            }),
             use_container_width=True,
         )
 
@@ -440,7 +440,7 @@ try:
                 "대여소수": "{:,}",
                 "총이용건수": "{:,}",
                 "대여소당이용건수": "{:,.1f}",
-            }).background_gradient(subset=["대여소당이용건수"], cmap="RdYlGn"),
+            }),
             use_container_width=True,
         )
 
@@ -472,7 +472,9 @@ ORDER BY 기준년월, 자치구
 
 try:
     df03 = run_query(SQL_03)
-    df03["년월"] = df03["년월"].astype(str)
+    # 기준년월이 int로 읽힐 수 있으므로 반드시 str 변환
+    df03["년월"] = df03["년월"].astype(str).str.strip()
+    df03["이용건수"] = pd.to_numeric(df03["이용건수"], errors="coerce").fillna(0).astype(int)
 
     # 전체 이용건수 기준 상위 5개 구 하이라이트
     top_gu = (
@@ -485,6 +487,7 @@ try:
 
     # 월 레이블 변환 (202507 → 25년 7월)
     def fmt_month(ym):
+        ym = str(ym).strip()
         return f"{ym[2:4]}년 {int(ym[4:6])}월"
 
     fig03 = go.Figure()
@@ -570,9 +573,10 @@ try:
             index="자치구", columns="년월", values="이용건수", aggfunc="sum"
         )
         pct = pivot.pct_change(axis=1) * 100
+        # 컬럼명을 읽기 좋게 변환 (202507 → 25년 7월)
+        pct.columns = [fmt_month(c) for c in pct.columns]
         st.dataframe(
-            pct.style.format("{:.1f}%", na_rep="-")
-               .background_gradient(cmap="RdYlGn", axis=None, vmin=-30, vmax=30),
+            pct.style.format("{:.1f}%", na_rep="-"),
             use_container_width=True,
         )
 
